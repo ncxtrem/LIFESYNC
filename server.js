@@ -1,38 +1,32 @@
 const express = require('express');
 const app = express();
 
-// === CONFIGURAÇÃO DE CORS (CORRIGIDA) ===
+// Middleware CORS
 app.use((req, res, next) => {
-  // Permite requisições de qualquer origem (incluindo o Netlify)
   res.header('Access-Control-Allow-Origin', '*');
-  // Métodos permitidos
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  // Headers permitidos
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  // Responde OK para requisições OPTIONS (preflight)
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
 
-// Middleware para processar JSON
 app.use(express.json());
 
-// Rota de teste
+// Log para confirmar que a rota está sendo registrada
+console.log('📦 Registrando rotas...');
+
 app.get('/', (req, res) => {
   res.send('Backend do LifeSync está funcionando!');
 });
 
-// Rota do chat
 app.post('/chat', async (req, res) => {
+  console.log('📨 Requisição recebida em /chat');
   try {
     const { message, history = [], systemInstruction } = req.body;
-    
-    // Railway injeta a chave da API como variável de ambiente
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-    // Estrutura corrigida do payload
     const payload = {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: history,
@@ -60,8 +54,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// Railway fornece a porta dinamicamente. NUNCA defina uma porta fixa.
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🔥 Servidor rodando na porta ${PORT}`);
+  console.log(`✅ Rotas registradas. Servidor rodando na porta ${PORT}`);
 });
