@@ -1,30 +1,43 @@
 const express = require('express');
 const app = express();
-app.use(express.json());
 
+// === CONFIGURAÇÃO DE CORS (CORRIGIDA) ===
 app.use((req, res, next) => {
+  // Permite requisições de qualquer origem (incluindo o Netlify)
   res.header('Access-Control-Allow-Origin', '*');
+  // Métodos permitidos
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  // Headers permitidos
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // Responde OK para requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
-app.get('/', (req, res) => res.send('Backend do LifeSync está funcionando!'));
+// Middleware para processar JSON
+app.use(express.json());
 
+// Rota de teste
+app.get('/', (req, res) => {
+  res.send('Backend do LifeSync está funcionando!');
+});
+
+// Rota do chat
 app.post('/chat', async (req, res) => {
   try {
     const { message, history = [], systemInstruction } = req.body;
+    
+    // Railway injeta a chave da API como variável de ambiente
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-    // 🚀 Estrutura CORRIGIDA (systemInstruction como objeto separado)
+    // Estrutura corrigida do payload
     const payload = {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: history,
       generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
     };
-
-    console.log('Payload para Gemini:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -47,5 +60,8 @@ app.post('/chat', async (req, res) => {
   }
 });
 
+// Railway fornece a porta dinamicamente. NUNCA defina uma porta fixa.
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🔥 Servidor rodando na porta ${PORT}`);
+});
