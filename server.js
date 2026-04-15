@@ -1,73 +1,51 @@
 const express = require('express');
 const app = express();
-
-// Configuração para entender JSON no corpo das requisições
 app.use(express.json());
 
-// Configuração CORS (permite que seu frontend no Netlify converse com este servidor)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// Rota de teste (útil para ver se o servidor está no ar)
-app.get('/', (req, res) => {
-  res.send('Backend do LifeSync está funcionando!');
-});
+app.get('/', (req, res) => res.send('Backend do LifeSync está funcionando!'));
 
-// Rota principal que seu app vai chamar
 app.post('/chat', async (req, res) => {
   try {
-    const { message, history, systemInstruction } = req.body;
-    
-    // A CHAVE FICA ESCONDIDA AQUI, NUNCA NO FRONTEND!
+    const { message, history = [], systemInstruction } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-    if (!GEMINI_API_KEY) {
-      throw new Error('Chave da API Gemini não configurada no servidor.');
-    }
+    // 🚀 Estrutura CORRIGIDA (systemInstruction como objeto separado)
+    const payload = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: history,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+    };
+
+    console.log('Payload para Gemini:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: systemInstruction }] },
-            ...history
-          ],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-        })
+        body: JSON.stringify(payload)
       }
     );
 
     const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Erro na API Gemini');
-    }
+    if (!response.ok) throw new Error(data.error?.message || 'Erro na API Gemini');
 
     const botReply = data.candidates[0].content.parts[0].text;
-
     res.status(200).json({ resposta: botReply });
 
   } catch (error) {
     console.error('Erro no backend:', error);
-    res.status(500).json({ 
-      error: 'Erro ao processar sua solicitação.',
-      details: error.message 
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Usa a porta fornecida pelo Railway ou 3000 como fallback
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🔥 Servidor rodando na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
