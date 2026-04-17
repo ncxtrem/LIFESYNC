@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 });
 
 // Rota do chat
-app.post('/chat', async (req, res) => {
+app.post('/chat', async (req, res) => { ... });
   console.log('📨 Requisição recebida em /chat');
   
   try {
